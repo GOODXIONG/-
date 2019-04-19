@@ -1,0 +1,657 @@
+---
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# 白葡萄酒的探索
+
+========================================================
+
+本报告探讨了一个包含大约4898瓶白葡萄酒的质量评分和属性的数据集。
+
+P. Cortez, A. Cerdeira, F. Almeida, T. Matos and J. Reis. 
+Modeling wine preferences by data mining from physicochemical properties.
+In Decision Support Systems, Elsevier, 47(4):547-553. ISSN: 0167-9236.
+
+Available at: [@Elsevier] http://dx.doi.org/10.1016/j.dss.2009.05.016
+              [Pre-press (pdf)] http://www3.dsi.uminho.pt/pcortez/winequality09.pdf
+              [bib] http://www3.dsi.uminho.pt/pcortez/dss09.bib
+
+```{r echo=FALSE, message=FALSE, warning=FALSE, packages}
+# 加载你最终使用的所有组件
+# 在这个代码块的分析中。
+
+# 注意，在这个代码块中，将参数 "echo" 设为假。
+# This prevents the code from displaying in the knitted HTML output.这可以避免代码混入 HTML 输出显示。
+# 应当在文件中，对所有代码块设为 echo=FALSE 。
+
+library(ggplot2)
+library(dplyr)
+library(knitr)
+library(GGally)
+library(scales)
+library(memisc)
+```
+
+```{r echo=FALSE, Load_the_Data}
+# 加载数据
+pf <- read.csv('wineQualityWhites.csv')
+pf <- na.omit(pf)
+```
+
+# 单变量绘图选择
+```{r echo=FALSE}
+# 查看数据集结构
+dim(pf)
+```
+
+```{r echo=FALSE}
+# 查看数据集变量信息
+str(pf)
+```
+
+```{r echo=FALSE}
+# 查看数据集变量的平均值等概要信息
+summary(pf)
+```
+
+```{r echo=FALSE}
+# 查看数据集的前6行
+head(pf)
+```
+
+```{r echo=FALSE}
+# 删除变量X
+pf <- subset(pf, select = -c(X))
+```
+
+该数据集包含了13个变量，4898行观察值。其中变量X与ID重复，将其删除。
+
+```{r echo=FALSE}
+# quanlity的柱形图
+ggplot(aes(x = quality), data = pf) + 
+  geom_bar()
+```
+
+```{r echo=FALSE}
+# quanlity的概要信息
+summary(pf$quality)
+```
+
+```{r echo=FALSE}
+# quanlity的数据值计数
+table(pf$quality)
+```
+
+quality的分布很接近正态分布，峰值集中在6。共有3，4，5，6，7，8，9，7个评分等级。我想知道，是什么属性影响了白葡萄酒的质量评分。
+
+```{r echo=FALSE}
+# fixed.acidity直方图
+ggplot(aes(x = fixed.acidity), data = pf) + 
+  geom_histogram(binwidth = 0.1)
+```
+
+```{r echo=FALSE}
+# 对x轴进行log10转换后的fixed.acidity直方图
+ggplot(aes(x = fixed.acidity), data = pf) + 
+  geom_histogram(binwidth = 0.01) + 
+  scale_x_log10()
+```
+
+```{r echo=FALSE}
+# fixed.acidity的概要
+summary(pf$fixed.acidity)
+```
+
+```{r echo=FALSE}
+# fixed.acidity数据值计数
+table(pf$fixed.acidity)
+```
+
+白葡萄酒的fixed.acidity（固定酸度）是葡萄酒酸度的一种，与保鲜度有关，影响口感的酸爽。
+fixed.acidity分布呈钟型分布，右长尾，其最大值比中值和三分位数高得多。
+中位数是6.8，平均值是6.855。
+通过对fixed.acidity进行log10转换，得到一个正态分布。
+
+```{r echo=FALSE}
+# volatile.acidity直方图
+ggplot(aes(x = volatile.acidity), data = pf) + 
+  geom_histogram(binwidth = 0.01)
+```
+
+```{r echo=FALSE}
+# 对x轴进行log10转换后的volatile.acidity直方图
+ggplot(aes(x = volatile.acidity), data = pf) + 
+  geom_histogram(binwidth = 0.01) + 
+  scale_x_log10()
+```
+
+volatile.acidity（挥发性酸度）：葡萄酒中醋酸的含量，过高会导致令人不愉快的醋味。
+数据呈钟型分布，右长尾，log10转换后volatile.acidity接近正态分布，峰值出现在0.2-0.3之间。
+
+```{r echo=FALSE}
+# citric.acid直方图
+ggplot(aes(x = citric.acid), data = pf) + 
+  geom_histogram(binwidth = 0.01)
+```
+
+```{r echo=FALSE}
+# citric.acid的概要信息
+summary(pf$citric.acid)
+```
+
+citric.acid（柠檬酸）：少量的柠檬酸可以给葡萄酒增添“新鲜”和风味
+分布接近正态分布，中位数是0.32，平均值为0.33，分布在0.5附近出现变化。
+
+综观以上三种酸：fixed.acidity，volatile.acidity以及citric.acid，其中fixed.acidity含量最大，其他两种酸大部分都是0.X的微量。而且fixed.acidity出现了右长尾分布，我会进一步分析fixed.acidity与quality的关系。
+
+```{r echo=FALSE}
+# residual.sugar直方图
+ggplot(aes(x = residual.sugar), data = pf) + 
+  geom_histogram(binwidth = 0.1)
+```
+
+```{r echo=FALSE}
+# residual.sugar概要信息
+summary(pf$residual.sugar)
+```
+
+```{r echo=FALSE}
+# 对x轴log10转换后的residual.sugar直方图
+ggplot(aes(x = residual.sugar), data = pf) + 
+  geom_histogram(binwidth = 0.1) + 
+  scale_x_log10()
+```
+
+residual.sugar（残糖）：发酵结束后剩余的糖的量，即造成葡萄酒中甜度口感的元素。
+大量的值集中在1-2之间，中位数是5.2， 平均值是6.391
+residual.suga呈右长尾分布，log10转换后的residual.suga分布呈双峰分布，峰值第一次在1.5左右，第二次接近9左右。
+
+```{r echo=FALSE}
+# chlorides直方图
+ggplot(aes(x = chlorides), data = pf) + 
+  geom_histogram(binwidth = 0.001)
+```
+
+```{r echo=FALSE}
+# 对x轴log10转换后的chlorides直方图
+ggplot(aes(x = chlorides), data = pf) + 
+  geom_histogram(binwidth = 0.01) + 
+  scale_x_log10()
+```
+
+chlorides（氯化物）：葡萄酒中盐的含量，即造成葡萄酒中咸口感的元素
+呈右长尾数据分布，大部分在0.0~0.1之间。
+log10转换后的chlorides分布接近正态分布，峰值在0.05左右。
+
+```{r echo=FALSE}
+# free.sulfur.dioxide直方图
+ggplot(aes(x = free.sulfur.dioxide), data = pf) + 
+  geom_histogram(binwidth = 1) + 
+  scale_x_continuous(breaks = seq(0,300,10))
+```
+
+```{r echo=FALSE}
+# free.sulfur.dioxide概要信息
+summary(pf$free.sulfur.dioxide)
+```
+
+```{r echo=FALSE}
+# 缩小x轴范围后的free.sulfur.dioxide直方图
+ggplot(aes(x = free.sulfur.dioxide), data = pf) + 
+  geom_histogram(binwidth = 0.5) + 
+  scale_x_continuous(breaks = seq(0,90,10), limits = c(0,90))
+```
+
+free.sulfur.dioxide（游离二氧化硫）:SO2的自由形态存在于SO2分子(溶解气体)与亚硫酸氢盐离子之间的平衡状态;它可以防止微生物的生长和葡萄酒的氧化。该变量是造成葡萄酒特殊香味的元素。
+分布呈正态分布，分布比较均匀，大量数值集中在20-40之间，在290附近出现一个异常值。修整最大值，设置更小的binsidth后，发现峰值出现在30左右。
+
+```{r echo=FALSE}
+# total.sulfur.dioxide直方图
+ggplot(aes(x = total.sulfur.dioxide), data = pf) + 
+  geom_histogram(binwidth = 0.5)
+```
+
+```{r echo=FALSE}
+# total.sulfur.dioxide的数值计数
+table(pf$total.sulfur.dioxide)
+```
+
+total.sulfur.dioxide（二氧化硫总量）:游离和结合态S02的量;在低浓度下，SO2在葡萄酒中几乎检测不到，但当游离SO2浓度超过50ppm时，SO2在葡萄酒的鼻子和味道中变得明显。
+分布呈正态分布，分布比较较为均匀。数值大部分为整数。
+
+```{r echo=FALSE}
+# density直方图
+ggplot(aes(x = density), data = pf) + 
+  geom_histogram(binwidth = 0.001)
+```
+
+```{r echo=FALSE}
+# density的概要信息
+summary(pf$density)
+```
+
+```{r echo=FALSE}
+# 缩小x轴范围后的density直方图
+ggplot(aes(x = density), data = pf) + 
+  geom_histogram(binwidth = 0.001) + 
+  scale_x_continuous(limits = c(0.987, 1.01), breaks = seq(0, 1.01, 0.01))
+```
+
+density（密度）：这取决于酒精和糖的含量。
+分布很接近正态分布，中位数为0.9937，平均值为0.9940。修整最大值后，发现数值大量集中在0.99-1之间。
+
+```{r echo=FALSE}
+# pH直方图
+ggplot(aes(x = pH), data = pf) + 
+  geom_histogram(binwidth = 0.1)
+```
+
+```{r echo=FALSE}
+# pH概要信息
+summary(pf$pH)
+```
+
+pH：描述葡萄酒的酸度或碱性，范围从0(非常酸性)到14(非常碱性);大多数葡萄酒的pH值在3-4之间。
+分布呈正态分布，中位数是3.18，平均值是3.18，峰值在3.25左右。
+
+```{r echo=FALSE}
+# sulphates直方图
+ggplot(aes(x = sulphates), data = pf) + 
+  geom_histogram(binwidth = 0.01)
+```
+
+sulphates（硫酸盐）:一种葡萄酒添加剂，可提高二氧化硫(S02)水平，具有抗菌和抗氧化作用。
+分布接近正态分布，右长尾分布，大量数值集中于0.3-0.5。
+
+```{r echo=FALSE}
+# alcohol直方图
+ggplot(aes(x = alcohol), data = pf) + 
+  geom_histogram(binwidth = 0.1) + 
+  scale_x_continuous(breaks = seq(8, 14.2, 0.5))
+```
+
+```{r echo=FALSE}
+# alcohol概要信息
+summary(pf$alcohol)
+```
+
+alcohol（酒精）:葡萄酒中酒精含量的百分比。分布接近右偏态，中位数是10.4，平均值是10.51，有两个高峰，一个大的在9.5左右，一个小的在12.5左右。
+
+
+# 单变量分析
+
+### 你的数据集结构是什么？
+本数据集有4898行观测值，共12个属性变量，其中连续变量有fixed.acidity，volatile.acidity， citric.acid， residual.sugar，chlorides，sulphates，free.sulfur.dioxide，total.sulfur.dioxide，alcohol，density，分类变量有quality。
+
+### 你的数据集内感兴趣的主要特性有哪些？
+由于此次探索的主要问题是关于影响⽩葡萄酒的质量的因素，所以我的数据集中，主要特征是quality变量。
+
+### 你认为数据集内哪些其他特征可以帮助你探索兴趣特点？
+
+```{r  fig.width=15, fig.height=15}
+# 变量关系图
+ggcorr(pf, label = TRUE, label_size = 6 , label_round = 2, hjust = 0.85)
+```
+
+从以上关系图可以得到，
+与quality存在较高的负相关度的变量为：density，total.sulfur.dioxide
+与quality存在较高的正相关度的变量为：alcohol，pH
+其他相关度较高的变量有：
+residual.sugar 与 density 相关度最高：0.84；
+free.sulfur.dioxide 和 total.sulfur.dioxide 相关度为：0.62 
+total.sulfur.dioxide 和 density 的相关度为：0.53
+alcohol 与 density ： -0.78
+alcohol 与 total.sulfur.dioxide： -0.45 
+alcohol 与 residual.sugar： -0.45
+fixed.acidity 与 pH：-0.43
+
+### 根据数据集内已有变量，你是否创建了任何新变量？
+否
+
+### 在已经探究的特性中，是否存在任何异常分布？你是否对数据进行一些操作，如清洁、调整或改变数据的形式？如果是，你为什么会这样做？
+其中fixed.acidity，volatile.acidity，residual.sugar，sulphates出现右长尾分布，其他变量均为接近正态分布。
+
+
+# 双变量绘图选择
+我们将quality的数据类型修订为factor类，为了更好地进行分类分析。
+```{r}
+# 将quality的数据类型修订为factor类
+pf$quality <- factor(pf$quality)
+```
+
+与quality正相关度最高是alcohol，我们先来探索quality与alcohol的关系
+
+```{r echo=FALSE}
+# quality和alcohol的箱线图
+ggplot(aes(x = quality, y = alcohol), data = pf) + 
+  geom_boxplot(alpha = 0.5, color = "blue") + 
+  stat_summary(fun.y = mean, geom = 'point', shape = 4, color = "red") + 
+  geom_smooth(method = 'lm', aes(group = 1)) + 
+  geom_jitter(alpha = 0.08) 
+```
+
+箱线图结合散点图，不仅可以看到每个质量等级的数量分布情况，线性回归线减少极端值的影响，更好的反映数据之间的趋势。还可以看到更高的质量等级quality需要更高数值的alocohol。
+
+```{r echo=FALSE}
+# 根据不同等级的quality来看alcohol的直方图
+ggplot(aes(x=alcohol, fill=quality), data = pf) +
+  geom_histogram(alpha = 1, binwidth = 1, position = "dodge", col = "black") + 
+  scale_x_continuous(breaks = seq(8,14.2,1)) + 
+  scale_color_brewer(type = 'div')
+```
+
+```{r echo=FALSE}
+# 对低计数值的放大后的alcohol的直方图
+ggplot(aes(x=alcohol, fill=quality), data = pf) +
+  geom_histogram(alpha = 1, binwidth = 1, position = "dodge", col = "black") + 
+  scale_x_continuous(breaks = seq(8,14.2,1)) + 
+  coord_cartesian(ylim = c(0, 15)) + 
+  scale_color_brewer(type = 'div')
+```
+
+根据不同的质量等级来看酒精的分布，结合对低计数值的放大图，可以看出，质量等级quality为9的白葡萄酒，较多存在于较高alcohol数值水平。质量等级quality为3的白葡萄酒，较多存在于较低alcohol数值水平。
+
+与alcohol相关度最高的是density，我们接着来探索alcohol与density的关系
+
+```{r echo=FALSE}
+# density和alcohol的散点图
+ggplot(aes(x = density, y = alcohol), data = pf) + 
+  geom_point(alpha = 0.1, na.rm = TRUE) +
+  xlim(quantile(pf$density, 0.01),quantile(pf$density, 0.99)) + 
+  geom_smooth(method = 'lm')
+```
+
+忽略density1%的数值后，可以看出alcohol与density的关系是负相关。随着density增加，alcohol相应减少。
+
+然后我们来看看quality与density的关系
+
+```{r echo=FALSE}
+# quality和density的散点图
+ggplot(aes(x = quality, y = density), data = pf) + 
+  geom_boxplot(alpha = 0.5, color = "blue") + 
+  stat_summary(fun.y = mean, geom = 'point', shape = 4, color = "red") + 
+  geom_smooth(method = 'lm', aes(group = 1)) + 
+  # 忽略density1%的数值
+  ylim(quantile(pf$density, 0.01),quantile(pf$density, 0.99)) + 
+  geom_jitter(alpha = 0.08)
+```
+
+忽略density1%的数值后，可以看出quality与density的关系是负相关，越高质量等级的白葡萄酒，密度越小。
+
+下面开始分析total.sulfur.dioxide 和 density 关系
+
+```{r echo=FALSE}
+# density和total.sulfur.dioxide的散点图
+ggplot(aes(x = density, y = total.sulfur.dioxide), data = pf) + 
+  geom_point(alpha = 0.1, na.rm = TRUE) +
+  geom_smooth(method = 'lm')
+```
+
+可以看出total.sulfur.dioxide与density的关系是正相关，越高数值的total.sulfur.dioxide白葡萄酒，density越大。
+
+接下来，我们来看看total.sulfur.dioxide 和 quanlity 关系
+
+```{r echo=FALSE}
+# quality和total.sulfur.dioxide的散点图
+ggplot(aes(x = quality, y = total.sulfur.dioxide), data = pf) + 
+  geom_boxplot(alpha = 0.5, color = "blue") + 
+  stat_summary(fun.y = mean, geom = 'point', shape = 4, color = "red") + 
+  geom_smooth(method = 'lm', aes(group = 1)) + 
+  ylim(quantile(pf$total.sulfur.dioxide, 0.01),quantile(pf$total.sulfur.dioxide, 0.99)) +
+  geom_jitter(alpha = 0.08)
+```
+
+忽略total.sulfur.dioxide1%的数值后，可以看出quality与total.sulfur.dioxide的关系是负相关，越高质量等级的白葡萄酒，二氧化硫总量越小。这个图跟quality与density的关系图很类似。
+
+接下来看看，相关度最高的residual.sugar 与 density关系：
+
+```{r echo=FALSE}
+# density和residual.sugar的散点图
+ggplot(aes(x = density, y = residual.sugar), data = pf) + 
+  geom_point(alpha = 0.1, na.rm = TRUE) +
+  coord_cartesian(ylim = c(0, 20)) + 
+  geom_smooth(method = 'lm')
+```
+
+对局部进行放大，发现residual.sugar 与 density关系是很强的正相关，越高residual.sugar的葡萄酒，density越大。
+
+下面开始分析quality 与 pH的关系：
+
+```{r echo=FALSE}
+# quality和pH散点图
+ggplot(aes(x = quality, y = pH), data = pf) + 
+  geom_boxplot(alpha = 0.5, color = "blue") + 
+  stat_summary(fun.y = mean, geom = 'point', shape = 4, color = "red") + 
+  geom_smooth(method = 'lm', aes(group = 1)) + 
+  geom_jitter(alpha = 0.08)
+```
+
+quality 与 pH的关系是正相关，线性回归较为平缓。
+
+我们接着来看看alcohol 与 pH的关系
+
+```{r echo=FALSE}
+# alcohol和pH散点图
+ggplot(aes(x = alcohol, y = pH), data = pf) + 
+  geom_point(alpha = 0.1, na.rm = TRUE) +
+  geom_smooth(method = 'lm')
+```
+
+alcohol 与 pH的关系是正相关，线性回归较为平缓。线性回归跟quality 与 pH的关系图很类似。
+
+
+# 双变量分析
+
+### 探讨你在这部分探究中观察到的一些关系。这些感兴趣的特性与数据集内其他特性有什么区别？
+此次分析对象是白葡萄酒，那么我选择了酒精属性作为切入点，我首先分析了quality和alcohol的关系，根据不同的质量等级来看酒精的分布，发现更高的质量等级quality需要更高数值的alocohol。
+接着我找到与alcohol相关度最高的是density，alcohol与density的关系是负相关。随着density增加，alcohol相应减少。
+然后我分析了quality与density的关系，发现quality与density的关系是负相关，越高质量等级的白葡萄酒，密度越小。
+最后我分析了quality与 pH的关系，发现quality 与 pH的关系是正相关，线性回归较为平缓。
+
+### 你是否观察到主要特性与其他特性之间的有趣关系？
+我分析了total.sulfur.dioxide 和 quality 关系，quality与total.sulfur.dioxide的关系是负相关，越高质量等级的白葡萄酒，二氧化硫总量越小。它们的关系图跟quality与density的关系图很类似。
+然后我分析了alcohol 与 pH的关系，是正相关，线性回归较为平缓。线性回归跟quality 与 pH的关系图很类似。
+
+### 你发现最强的关系是什么？
+最强的关系是residual.sugar 与 density关系，相关度高达0.84，
+
+# 多变量绘图选择
+
+我们首先分析alcohol、density 和 quality之间的关系
+
+```{r echo=FALSE}
+# 根据quality的分类，density和alcohol的散点图
+ ggplot(aes(y = density, x = alcohol, color = quality), data = pf) +
+  geom_point(position = position_jitter(0.3)) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'quality',
+                                    reverse = FALSE,
+                                    override.aes = list(alpha = 1, size = 2))) + 
+  theme_dark() + 
+  ylim(0.985, 1.005) + 
+  labs(y = 'density',x = 'alcohol') + 
+  ggtitle("density VS alcohol VS quality")
+```
+
+从图上可知，alcohol数值越大，density数值越少，高等级quality的数量越多，
+但由于数量大量集中于5，6，7质量等级，3，9等级的数量较少，很难看出3，9质量等级的数据分布。
+
+```{r echo=FALSE}
+# 根据quality的分类，density和alcohol的散点图
+ ggplot(aes(y = density, x = alcohol, color = quality), data = subset(pf, quality == 3 | quality == 4 | quality == 8 | quality == 9)) +
+  geom_point() + 
+  ylim(0.985, 1.005) + 
+  scale_color_brewer(type = 'div') + 
+  theme_dark() + 
+  labs(y = 'density',x = 'alcohol') + 
+  ggtitle("density VS alcohol VS quality")
+```
+
+我们过滤掉数量较大的5，6，7质量等级的白葡萄酒，看看3，4，8，9质量等级的数据分布，在alcohol=11之后，质量等级8，9的数量开始增多，质量等级8，9的数量开始减少。
+
+下面我们来看看，alcohol、pH 和 quality之间的关系
+
+```{r echo=FALSE}
+# 根据quality的分类，pH和alcohol的散点图
+ ggplot(aes(y = pH, x = alcohol, color = quality), data = pf) +
+  geom_point(position = position_jitter(0.3)) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'quality',
+                                    reverse = FALSE,
+                                    override.aes = list(alpha = 1, size = 2))) + 
+  theme_dark() +
+  labs(y = 'pH',x = 'alcohol') + 
+  ggtitle("pH VS alcohol VS quality")
+```
+
+从上图可以看出，pH=3.0时，quality为7，8，9的数量比pH=3.3时，quality为7，8，9的数量明显较少，
+alcohol=10时，quality为7，8，9的数量比alcohol=12时，quality为7，8，9的数量明显较少，
+
+```{r echo=FALSE}
+# 根据quality的分类，pH和alcohol的散点图的另一种表现形式
+ggplot(aes(x = alcohol, y = pH), data = pf) + 
+  geom_jitter(alpha = 1/10) + 
+  facet_wrap( ~ quality ) + 
+  geom_smooth(method = 'lm')
+```
+
+结合上图可以得出，alcohol和pH数值越大，越高等级quatily数量越多。pH对quality的影响相对比较微弱，
+
+下面我们来看看，density、pH 和 quality之间的关系
+
+```{r echo=FALSE}
+# 根据quality的分类，pH和density的散点图
+ ggplot(aes(y = density, x = pH, color = quality), data = pf) +
+  geom_point(position = position_jitter(0.3)) + 
+  ylim(0.987, 1) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'quality',
+                                    reverse = FALSE,
+                                    override.aes = list(alpha = 1, size = 2))) + 
+  theme_dark() +
+  labs(y = 'density',x = 'pH') + 
+  ggtitle("pH VS density VS quality")
+```
+
+从图上可看出，density数值越小，quality的高等级数量越多，由于3，9等级的数量较少，很难看出3，9质量等级的数据分布。
+
+```{r echo=FALSE}
+# 过滤掉数量较大的5，6，7质量等级的quality后的pH和density的散点图
+ ggplot(aes(y = density, x = pH, color = quality), data = subset(pf, quality == 3 | quality == 4 | quality == 8 | quality == 9)) +
+  geom_point() + 
+  ylim(0.987, 1) +
+  scale_color_brewer(type = 'div') + 
+  theme_dark() +
+  labs(y = 'density',x = 'pH') + 
+  ggtitle("pH VS density VS quality")
+```
+
+我们过滤掉数量较大的5，6，7质量等级的白葡萄酒，看看3，4，8，9质量等级的数据分布，发现质量等级为9的数量集中在pH > 3.25，desity < 0.992的区域。
+
+下面我们来看看，total.sulfur.dioxide、density 和 quality之间的关系
+
+```{r echo=FALSE}
+# 根据quality的分类，density和total.sulfur.dioxide的散点图
+ ggplot(aes(y = density, x = total.sulfur.dioxide, color = quality), data = pf) +
+  geom_point(position = position_jitter(0.3)) + 
+  ylim(0.987, 1.01) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'quality',
+                                    reverse = FALSE,
+                                    override.aes = list(alpha = 1, size = 2))) + 
+  theme_dark() + 
+  labs(y = 'density',x = 'total.sulfur.dioxide') + 
+  ggtitle("total.sulfur.dioxide VS density VS quality")
+```
+
+从上图可以得到，越小数值的total.sulfur.dioxide和越小数值的density，高质量等级的quality的数量越多。
+
+# 多变量分析
+
+###  探讨你在这部分探究中观察到的一些关系。通过观察感兴趣的特性，是否存在相互促进的特性？
+alcohol数值越大，density数值越少，高等级quality的数量越多，
+alcohol和pH数值越大，越高等级quatily数量越多。
+越小数值的total.sulfur.dioxide和越小数值的density，高质量等级的quality的数量越多。
+
+### 这些特性之间是否存在有趣或惊人的联系呢？
+从density、pH 和 quality之间的关系中可以得出，density数值越小，quality的高等级数量越多，但对比density，pH对quality的影响比较小。
+
+### 选项：你是否创建过数据集的任何模型？讨论你模型的优缺点。
+否
+
+------
+
+# 定稿图与总结
+
+### 绘图一
+```{r echo=FALSE}
+# 按quality分类，alcohol和pH的散点图
+ggplot(aes(x = alcohol, y = pH), data = pf) + 
+  geom_jitter(alpha = 1/10) + 
+  facet_wrap( ~ quality ) + 
+  geom_smooth(method = 'lm') + 
+  labs(title = "Affect of alcohol by volume and pH on quality", 
+       x = "alcohol by volume, %", y = "pH")
+```
+
+### 描述一
+alcohol和pH数值越大，越高等级quatily数量越多。
+pH对quality的影响相对比较微弱，变化不明显。
+质量等级quality为5，6，7的白葡萄酒数量较多，质量等级quality为3，4，8，9的白葡萄酒数量较少，特别是质量等级quality为9的数量最少。
+
+### 绘图二
+```{r echo=FALSE, Plot_Two}
+# 按quality分类，density和alcohol散点图
+ ggplot(aes(y = density, x = alcohol, color = quality), data = pf) +
+  geom_point(position = position_jitter(0.3)) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'quality',
+                                    reverse = FALSE,
+                                    override.aes = list(alpha = 1, size = 2))) + 
+  theme_dark() + 
+  ylim(0.985, 1.005) + 
+  labs(y = 'density, g/cm^3',x = 'alcohol by volume, %') + 
+  ggtitle("Affect of density and alcohol by volume on quality")
+```
+
+### 描述二
+从图上可知，alcohol数值越大，density数值越少，高等级quality的数量越多，
+
+### 绘图三
+```{r echo=FALSE, Plot_Three}
+# 按quality分类，density和total.sulfur.dioxide散点图
+ ggplot(aes(y = density, x = total.sulfur.dioxide, color = quality), data = pf) +
+  geom_point(position = position_jitter(0.3)) + 
+  xlim(quantile(pf$total.sulfur.dioxide, 0.01), quantile(pf$total.sulfur.dioxide, 0.99)) + 
+  ylim(quantile(pf$density, 0.01), quantile(pf$density, 0.99)) + 
+  scale_color_brewer(type = 'div',
+    guide = guide_legend(title = 'quality',
+                                    reverse = FALSE,
+                                    override.aes = list(alpha = 1, size = 2))) + 
+  theme_dark() + 
+  labs(y = 'density, g/cm^3',x = 'total.sulfur.dioxide, mg / dm^3') + 
+  ggtitle("Affect of total.sulfur.dioxide and density on quality")
+```
+
+### 描述三
+
+从上图可以得到，越小数值的total.sulfur.dioxide和越小数值的density，高质量等级的quality的数量越多。
+
+------
+
+# 反思
+
+我在分析中遇到的困难：
+1. 质量等级quality = 3，9 的数据量太少，特别是质量等级为9的数据量非常少，一定程度影响了高质量等级的数据分布判断。
+2. 没有建立一个用于预测质量等级的线性模型。
+3. 对于R语言的学习掌握不够深入，很多方法不够熟悉，还需要进一步加强。
+
+我在取得的成功：
+1. 通过双变量和多变量探索分析，我得到一个结论：alcohol和pH的关系是正相关，虽然alcohol对quality影响较为微弱，但alcohol和quality的关系是正相关，pH和quality的关系也是正相关，所以pH和alcohol能相互加强对quality的关系。
+2. 在多变量分析阶段，我通过添加较强的对比颜色，能让读者更好地分辨出高质量等级和低质量等级的区别。
+
+我对将来的期待：
+1.将来工作中如果可以增加更多的数据集，特别是质量等级>=9和质量等级<=3的数据量，减少当前部分质量等级数据量不足的缺点。
+2. 能够建立一个用于预测质量等级的线性模型
